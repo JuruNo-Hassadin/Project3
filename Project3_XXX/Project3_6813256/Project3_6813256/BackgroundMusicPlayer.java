@@ -48,7 +48,7 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
                         ? sourceFormat.getSampleRate() : 44_100.0f;
                 AudioFormat pcmFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,       // set whole new audio format object
                         sampleRate, 16, channels, channels * 2, sampleRate, false);
-                try (AudioInputStream decoded = AudioSystem.getAudioInputStream(pcmFormat, encoded)) {
+                try (AudioInputStream decoded = AudioSystem.getAudioInputStream(pcmFormat, encoded)) {  // reassign modified value
                     Clip loadedClip = AudioSystem.getClip();
                     loadedClip.open(decoded);
                     synchronized (this) {
