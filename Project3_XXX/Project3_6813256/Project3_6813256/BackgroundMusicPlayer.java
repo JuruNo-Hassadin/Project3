@@ -73,11 +73,11 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
         if (clip == null || !clip.isOpen()) {
             return;
         }
-        if (clip.isControlSupported(BooleanControl.Type.MUTE)) {
+        if (clip.isControlSupported(BooleanControl.Type.MUTE)) {   // check if playable
             BooleanControl mute = (BooleanControl) clip.getControl(BooleanControl.Type.MUTE);
             mute.setValue(volume == 0);
         }
-        if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+        if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {   // set volumn
             FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
             float decibels = volume == 0
                     ? gain.getMinimum()
