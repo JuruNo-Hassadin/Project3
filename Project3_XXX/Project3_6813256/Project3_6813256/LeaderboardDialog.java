@@ -14,8 +14,8 @@ import javax.swing.table.DefaultTableModel;
 
 /** Displays every saved play session in a non-editable table. */
 public final class LeaderboardDialog extends JDialog {
-    public LeaderboardDialog(JFrame owner, LeaderboardStore store) {
-        super(owner, "Leaderboard", true);
+    public LeaderboardDialog(JFrame owner, LeaderboardStore store) {     // store class from another file
+        super(owner, "Leaderboard", true);     // freeze other frames
         setLayout(new BorderLayout(8, 8));
         String[] columns = {"Played at", "Player", "Difficulty", "Floors", "Seconds"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
