@@ -41,12 +41,12 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
                 throw new IOException("Missing music resource: " + MUSIC_RESOURCE);
             }
             try (BufferedInputStream buffered = new BufferedInputStream(resource);
-                    AudioInputStream encoded = AudioSystem.getAudioInputStream(buffered)) {
-                AudioFormat sourceFormat = encoded.getFormat();
-                int channels = sourceFormat.getChannels() > 0 ? sourceFormat.getChannels() : 2;
-                float sampleRate = sourceFormat.getSampleRate() > 0
+                    AudioInputStream encoded = AudioSystem.getAudioInputStream(buffered)) {   // audio stream that is wrapped
+                AudioFormat sourceFormat = encoded.getFormat();                               // How audio should be read
+                int channels = sourceFormat.getChannels() > 0 ? sourceFormat.getChannels() : 2;   // if > 0 ok then 2
+                float sampleRate = sourceFormat.getSampleRate() > 0                            // frequency that a sound should be read
                         ? sourceFormat.getSampleRate() : 44_100.0f;
-                AudioFormat pcmFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
+                AudioFormat pcmFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,       // set whole new audio format object
                         sampleRate, 16, channels, channels * 2, sampleRate, false);
                 try (AudioInputStream decoded = AudioSystem.getAudioInputStream(pcmFormat, encoded)) {
                     Clip loadedClip = AudioSystem.getClip();
