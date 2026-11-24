@@ -1,4 +1,0 @@
-
-Hassadin	123456789	Music,Travel,Games,Food,Study
-Sornchai	1234	Music,Travel
-Warisa	123456	Games
