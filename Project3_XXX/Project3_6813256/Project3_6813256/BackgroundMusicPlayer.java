@@ -23,19 +23,19 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
     private Clip clip;
 
     public void startLooping() {
-        Thread loader = new Thread(this::loadAndPlay, "tower-hop-background-music");
-        loader.setDaemon(true);
+        Thread loader = new Thread(this::loadAndPlay, "tower-hop-background-music"); //override run() by loadAndPlay
+        loader.setDaemon(true);  // THread type that's run in the background
         loader.start();
     }
 
     public void setVolume(int volume) {
         this.volume = Math.max(0, Math.min(100, volume));
         synchronized (this) {
-            applyVolume();
+            applyVolume();    // method of "this"
         }
     }
 
-    private void loadAndPlay() {
+    private void loadAndPlay() {          // method that thread actually running on
         try (InputStream resource = Files.newInputStream(MUSIC_RESOURCE)) {
             if (resource == null) {
                 throw new IOException("Missing music resource: " + MUSIC_RESOURCE);
