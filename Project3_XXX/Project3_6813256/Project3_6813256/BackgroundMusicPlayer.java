@@ -1,3 +1,10 @@
+/*
+6813256 sornchai soontranon
+6813259 hassadin kheawkhum 
+6813255 Warisa Inthararak 
+6813104 Shayne Chawengchot
+*/
+
 package Project3_6813256;
 
 import java.io.BufferedInputStream;
@@ -23,40 +30,40 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
     private Clip clip;
 
     public void startLooping() {
-        Thread loader = new Thread(this::loadAndPlay, "tower-hop-background-music"); //override run() by loadAndPlay
-        loader.setDaemon(true);  // THread type that's run in the background
+        Thread loader = new Thread(this::loadAndPlay, "tower-hop-background-music");
+        loader.setDaemon(true);
         loader.start();
     }
 
     public void setVolume(int volume) {
         this.volume = Math.max(0, Math.min(100, volume));
         synchronized (this) {
-            applyVolume();    // method of "this"
+            applyVolume();
         }
     }
 
-    private void loadAndPlay() {          // method that thread actually running on
+    private void loadAndPlay() {
         try (InputStream resource = Files.newInputStream(MUSIC_RESOURCE)) {
             if (resource == null) {
                 throw new IOException("Missing music resource: " + MUSIC_RESOURCE);
             }
             try (BufferedInputStream buffered = new BufferedInputStream(resource);
-                    AudioInputStream encoded = AudioSystem.getAudioInputStream(buffered)) {   // audio stream that is wrapped
-                AudioFormat sourceFormat = encoded.getFormat();                               // How audio should be read
-                int channels = sourceFormat.getChannels() > 0 ? sourceFormat.getChannels() : 2;   // if > 0 ok then 2
-                float sampleRate = sourceFormat.getSampleRate() > 0                            // frequency that a sound should be read
+                    AudioInputStream encoded = AudioSystem.getAudioInputStream(buffered)) {
+                AudioFormat sourceFormat = encoded.getFormat();
+                int channels = sourceFormat.getChannels() > 0 ? sourceFormat.getChannels() : 2;
+                float sampleRate = sourceFormat.getSampleRate() > 0
                         ? sourceFormat.getSampleRate() : 44_100.0f;
-                AudioFormat pcmFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,       // set whole new audio format object
+                AudioFormat pcmFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
                         sampleRate, 16, channels, channels * 2, sampleRate, false);
-                try (AudioInputStream decoded = AudioSystem.getAudioInputStream(pcmFormat, encoded)) {  // reassign modified value
+                try (AudioInputStream decoded = AudioSystem.getAudioInputStream(pcmFormat, encoded)) {
                     Clip loadedClip = AudioSystem.getClip();
-                    loadedClip.open(decoded);     // user the stream as one-timer for load whole audio into memory (Clip object), use stream because stream's formatting
-                    synchronized (this) {      // syncronized for only within same object(this class)
-                        if (closed) {    // never happend?????????????????????????????????
+                    loadedClip.open(decoded);
+                    synchronized (this) {
+                        if (closed) {
                             loadedClip.close();
                             return;
                         }
-                        clip = loadedClip;  // save as member
+                        clip = loadedClip;
                         applyVolume();
                         clip.loop(Clip.LOOP_CONTINUOUSLY);
                     }
@@ -73,11 +80,11 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
         if (clip == null || !clip.isOpen()) {
             return;
         }
-        if (clip.isControlSupported(BooleanControl.Type.MUTE)) {   // check if playable
+        if (clip.isControlSupported(BooleanControl.Type.MUTE)) {
             BooleanControl mute = (BooleanControl) clip.getControl(BooleanControl.Type.MUTE);
             mute.setValue(volume == 0);
         }
-        if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {   // set volumn
+        if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
             FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
             float decibels = volume == 0
                     ? gain.getMinimum()

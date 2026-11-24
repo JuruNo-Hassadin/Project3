@@ -13,7 +13,10 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import javax.swing.JPanel;
@@ -21,7 +24,7 @@ import javax.swing.Timer;
 
 /** Custom-drawn play area with automatic running and platform collision. */
 public final class GamePanel extends JPanel {
-    private static final int PLAYER_SCALE = 4;
+    private static final int PLAYER_RENDER_HEIGHT = 64;
     private static final int PICKUP_DRAW_WIDTH = 40;
     private static final int PICKUP_DRAW_HEIGHT = 48;
     private GameSession session;
@@ -34,21 +37,32 @@ public final class GamePanel extends JPanel {
     private Runnable onQuitToMenu = () -> { };
     private IntConsumer onGameOver = score -> { };
     private Consumer<Difficulty> onDifficultySelected = difficulty -> { };
+    private final MenuClickSoundEffect clickSound;
+    private final BooleanSupplier soundEnabled;
     private final Timer repaintTimer;
     private final JumpSoundEffect jumpSound = new JumpSoundEffect();
     private final StopwatchSoundEffect stopwatchSound = new StopwatchSoundEffect();
     private final GameOverSoundEffect gameOverSound = new GameOverSoundEffect();
-    private final BufferedImage playerSprite = PixelArt.player();
-    private final BufferedImage highContrastPlayerSprite = PixelArt.highContrastPlayer();
-    private final PlayerAnimator playerAnimator = new PlayerAnimator(playerSprite);
-    private final PlayerAnimator highContrastPlayerAnimator = new PlayerAnimator(highContrastPlayerSprite);
+    private final Map<PlayerSkin, PlayerAnimator> playerAnimators = createPlayerAnimators();
     private final BufferedImage stopwatchSprite = PixelArt.stopwatch();
     private final BufferedImage platformTile = PixelArt.platform();
-    private final BufferedImage backgroundImage = PixelArt.background();
-    private String message = "Press Start. Run near an edge, then Space or click to jump and reverse.";
+    private PlayerSkin playerSkin = PlayerSkin.RUNNER;
+    private String message = "Press Start. Some platforms move side to side; Space or click jumps.";
     private long lastUpdateNanos = System.nanoTime();
 
-    public GamePanel() {
+    private static Map<PlayerSkin, PlayerAnimator> createPlayerAnimators() {
+        Map<PlayerSkin, PlayerAnimator> animators = new EnumMap<>(PlayerSkin.class);
+        for (PlayerSkin skin : PlayerSkin.values()) {
+            int legStartRow = skin == PlayerSkin.RUNNER ? 9
+                    : skin == PlayerSkin.SHAYNE ? 25 : 24;
+            animators.put(skin, new PlayerAnimator(PixelArt.player(skin), legStartRow));
+        }
+        return animators;
+    }
+
+    public GamePanel(MenuClickSoundEffect clickSound, BooleanSupplier soundEnabled) {
+        this.clickSound = clickSound;
+        this.soundEnabled = soundEnabled == null ? () -> true : soundEnabled;
         setPreferredSize(new Dimension(1100, 620));
         setFocusable(true);
         setBackground(new Color(202, 231, 247));
@@ -70,11 +84,12 @@ public final class GamePanel extends JPanel {
         session = new GameSession(settings);
         session.start();
         pendingSettings = settings;
+        playerSkin = settings.getPlayerSkin();
         awaitingStart = false;
         paused = false;
         gameOverShown = false;
         lastUpdateNanos = System.nanoTime();
-        message = "Auto-running. Jump near the edge; Space jumps and Esc pauses.";
+        message = "Auto-running. Some platforms move side to side. Space jumps; Esc pauses.";
         onRunStarted.run();
         requestFocusInWindow();
         repaint();
@@ -100,17 +115,23 @@ public final class GamePanel extends JPanel {
         onDifficultySelected = action == null ? difficulty -> { } : action;
     }
 
+    public void setPlayerSkin(PlayerSkin selectedSkin) {
+        playerSkin = selectedSkin == null ? PlayerSkin.RUNNER : selectedSkin;
+        repaint();
+    }
+
     /** Shows the play scene, but waits for the first Spacebar press to start. */
     public void prepareForStart(GameSettings settings) {
         session = new GameSession(settings);
         session.start();
         session.pause();
         pendingSettings = settings;
+        playerSkin = settings.getPlayerSkin();
         awaitingStart = true;
         paused = false;
         gameOverShown = false;
         lastUpdateNanos = System.nanoTime();
-        message = "Press Spacebar once to start the run. Escape returns to the menu.";
+        message = "Press Spacebar to start. Some platforms move side to side. Escape returns.";
         requestFocusInWindow();
         repaint();
     }
@@ -212,6 +233,7 @@ public final class GamePanel extends JPanel {
         if (awaitingStart) {
             for (int index = 0; index < Difficulty.values().length; index++) {
                 if (difficultyBounds(index).contains(event.getPoint())) {
+                    playMenuClick();
                     selectDifficulty(Difficulty.values()[index]);
                     requestFocusInWindow();
                     repaint();
@@ -259,19 +281,21 @@ public final class GamePanel extends JPanel {
     private void drawBackground(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                 RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
+        g.drawImage(PixelArt.background(), 0, 0, getWidth(), getHeight(), null);
     }
 
     private void drawPlatforms(Graphics2D g) {
         List<Platform> visiblePlatforms = session == null ? List.of() : session.getPlatforms();
         for (Platform platform : visiblePlatforms) {
+            int screenX = worldToScreenX(platform.getX());
             int screenY = worldToScreenY(platform.getY());
-            if (screenY < -24 || screenY > getHeight() + 4) {
+            if (screenX + platform.getWidth() < 0 || screenX > getWidth()
+                    || screenY < -24 || screenY > getHeight() + 4) {
                 continue;
             }
             Shape previousClip = g.getClip();
-            g.clipRect(platform.getX(), screenY, platform.getWidth(), 22);
-            for (int x = platform.getX(); x < platform.getX() + platform.getWidth(); x += 32) {
+            g.clipRect(screenX, screenY, platform.getWidth(), 22);
+            for (int x = screenX; x < screenX + platform.getWidth(); x += 32) {
                 g.drawImage(platformTile, x, screenY, 32, 22, null);
             }
             g.setClip(previousClip);
@@ -302,21 +326,19 @@ public final class GamePanel extends JPanel {
 
     private void drawPlayer(Graphics2D g) {
         boolean facingLeft = session != null && session.isFacingLeft();
-        GameSettings renderSettings = session == null ? pendingSettings : session.getSettings();
-        boolean highContrast = renderSettings != null && renderSettings.isHighContrast();
-        PlayerAnimator animator = highContrast ? highContrastPlayerAnimator : playerAnimator;
+        PlayerAnimator animator = playerAnimators.get(playerSkin);
         boolean airborne = session != null && (session.isJumping() || session.isFalling());
         boolean running = session != null && session.isRunning() && !session.isPaused() && !paused;
         BufferedImage sprite = animator.frame(airborne, running, System.nanoTime());
+        int scale = playerScale();
         int bottomPadding = animator.getBottomTransparentRows();
-        int x = session == null ? 320 : (int) Math.round(session.getPlayerX());
+        int x = session == null ? 320 : worldToScreenX(session.getPlayerX());
         double worldY = session == null ? 0.0 : session.getPlayerWorldY();
-        int width = sprite.getWidth() * PLAYER_SCALE;
-        int height = sprite.getHeight() * PLAYER_SCALE;
-        // The sprite PNG contains transparent rows below the shoes. Move its
-        // image rectangle down so the last visible row meets the platform.
-        int y = worldToScreenY(worldY) - height + bottomPadding * PLAYER_SCALE;
-        if (facingLeft) {
+        int width = sprite.getWidth() * scale;
+        int height = sprite.getHeight() * scale;
+        // Keep the transparent rows below the paws aligned with the platform.
+        int y = worldToScreenY(worldY) - height + bottomPadding * scale;
+        if (facingLeft && playerSkin != PlayerSkin.SHAYNE) {
             g.drawImage(sprite, x + width, y, x, y + height,
                     0, 0, sprite.getWidth(), sprite.getHeight(), null);
         } else {
@@ -325,9 +347,30 @@ public final class GamePanel extends JPanel {
         }
     }
 
+    private int playerScale() {
+        return Math.max(1, PLAYER_RENDER_HEIGHT / PixelArt.player(playerSkin).getHeight());
+    }
+
+    private int worldToScreenX(double worldX) {
+        if (session == null) {
+            return (int) Math.round(worldX);
+        }
+        BufferedImage sprite = PixelArt.player(playerSkin);
+        double playerWidth = sprite.getWidth() * playerScale();
+        double targetPlayerX = (getWidth() - playerWidth) / 2.0;
+        return (int) Math.round(targetPlayerX + worldX - session.getPlayerX());
+    }
+
     private int worldToScreenY(double worldY) {
-        double cameraOffset = session == null ? 0.0 : session.getCameraOffset();
-        return (int) Math.round(getHeight() - 35.0 - worldY + cameraOffset);
+        if (session == null) {
+            return (int) Math.round(getHeight() - 35.0 - worldY);
+        }
+        BufferedImage sprite = PixelArt.player(playerSkin);
+        int scale = playerScale();
+        double spriteHeight = sprite.getHeight() * scale;
+        double bottomPadding = playerAnimators.get(playerSkin).getBottomTransparentRows() * scale;
+        double targetFootY = getHeight() / 2.0 + spriteHeight / 2.0 - bottomPadding;
+        return (int) Math.round(targetFootY + session.getPlayerWorldY() - worldY);
     }
 
     private void drawStopwatchPickups(Graphics2D g) {
@@ -336,7 +379,7 @@ public final class GamePanel extends JPanel {
         }
         for (StopwatchPickup pickup : session.getStopwatchPickups()) {
             int y = worldToScreenY(pickup.getPlatform().getY()) - PICKUP_DRAW_HEIGHT;
-            int x = pickup.getX() + (StopwatchPickup.HITBOX_WIDTH - PICKUP_DRAW_WIDTH) / 2;
+            int x = worldToScreenX(pickup.getX()) + (StopwatchPickup.HITBOX_WIDTH - PICKUP_DRAW_WIDTH) / 2;
             g.drawImage(stopwatchSprite, x, y,
                     PICKUP_DRAW_WIDTH, PICKUP_DRAW_HEIGHT, null);
         }
@@ -519,12 +562,19 @@ public final class GamePanel extends JPanel {
 
     private void handlePauseMenuClick(java.awt.Point point) {
         if (pauseButtonBounds(0).contains(point)) {
+            playMenuClick();
             resumeGame();
         } else if (pauseButtonBounds(1).contains(point)) {
+            playMenuClick();
             onPauseSettings.run();
         } else if (pauseButtonBounds(2).contains(point)) {
+            playMenuClick();
             onQuitToMenu.run();
         }
+    }
+
+    private void playMenuClick() {
+        clickSound.play(soundEnabled.getAsBoolean());
     }
 
     private void pauseGame() {
@@ -575,7 +625,7 @@ public final class GamePanel extends JPanel {
         paused = false;
         gameOverShown = false;
         lastUpdateNanos = System.nanoTime();
-        message = "Auto-running. Jump near the edge; Space jumps and Esc pauses.";
+        message = "Auto-running. Some platforms move side to side. Space jumps; Esc pauses.";
         onRunStarted.run();
         requestFocusInWindow();
         repaint();

@@ -1,3 +1,9 @@
+/*
+6813256 sornchai soontranon
+6813259 hassadin kheawkhum 
+6813255 Warisa Inthararak 
+6813104 Shayne Chawengchot
+*/
 package Project3_6813256;
 
 import java.awt.Color;
@@ -13,6 +19,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import javax.swing.JPanel;
 
 /** Pixel-art main menu with four clickable menu actions. */
@@ -35,13 +42,17 @@ public final class MenuPanel extends JPanel {
     }
 
     private final Actions actions;
-    private final BufferedImage background = PixelArt.background();
-    private final BufferedImage player = PixelArt.player();
+    private final MenuClickSoundEffect clickSound;
+    private final BooleanSupplier soundEnabled;
+    private PlayerSkin playerSkin = PlayerSkin.RUNNER;
     private final BufferedImage platformTile = PixelArt.platform();
     private MenuButton hoveredButton;
 
-    public MenuPanel(Actions actions) {
+    public MenuPanel(Actions actions, MenuClickSoundEffect clickSound,
+            BooleanSupplier soundEnabled) {
         this.actions = actions;
+        this.clickSound = clickSound;
+        this.soundEnabled = soundEnabled == null ? () -> true : soundEnabled;
         setFocusable(true);
         setPreferredSize(new java.awt.Dimension(1100, 620));
         setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
@@ -62,6 +73,7 @@ public final class MenuPanel extends JPanel {
                 if (button == null) {
                     return;
                 }
+                clickSound.play(MenuPanel.this.soundEnabled.getAsBoolean());
                 switch (button) {
                     case PLAY -> actions.onPlay();
                     case LEADERBOARD -> actions.onLeaderboard();
@@ -73,6 +85,11 @@ public final class MenuPanel extends JPanel {
         });
     }
 
+    public void setPlayerSkin(PlayerSkin selectedSkin) {
+        playerSkin = selectedSkin == null ? PlayerSkin.RUNNER : selectedSkin;
+        repaint();
+    }
+
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
@@ -80,7 +97,7 @@ public final class MenuPanel extends JPanel {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                 RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-        g.drawImage(background, 0, 0, getWidth(), getHeight(), null);
+        g.drawImage(PixelArt.background(), 0, 0, getWidth(), getHeight(), null);
         g.setColor(new Color(13, 28, 45, 82));
         g.fillRect(0, 0, getWidth(), getHeight());
         drawGround(g);
@@ -156,8 +173,10 @@ public final class MenuPanel extends JPanel {
     }
 
     private void drawMenuCharacter(Graphics2D g) {
-        int width = player.getWidth() * 4;
-        int height = player.getHeight() * 4;
+        BufferedImage player = PixelArt.player(playerSkin);
+        int scale = Math.max(1, 64 / player.getHeight());
+        int width = player.getWidth() * scale;
+        int height = player.getHeight() * scale;
         int groundY = getHeight() - 58;
         int x = 76;
         int y = groundY - height + 12;

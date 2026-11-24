@@ -1,3 +1,9 @@
+/*
+6813256 sornchai soontranon
+6813259 hassadin kheawkhum 
+6813255 Warisa Inthararak 
+6813104 Shayne Chawengchot
+*/
 package Project3_6813256;
 
 import java.io.IOException;
@@ -33,10 +39,10 @@ public final class LeaderboardStore {
                 Long.toString(entry.durationSeconds()));
         Path parent = file.getParent();
         if (parent != null) {
-            Files.createDirectories(parent);   // update parent back to file object
+            Files.createDirectories(parent);
         }
         Files.writeString(file, row + System.lineSeparator(), StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND);    // save to file
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     public synchronized List<LeaderboardEntry> loadAll() throws IOException {
@@ -50,7 +56,7 @@ public final class LeaderboardStore {
                 continue;
             }
             try {
-                entries.add(new LeaderboardEntry(    // load all lines from storage file back to arraylist
+                entries.add(new LeaderboardEntry(
                         LocalDateTime.parse(fields[0]),
                         fields[1],
                         Difficulty.valueOf(fields[2]),
@@ -60,7 +66,8 @@ public final class LeaderboardStore {
                 // Ignore malformed rows so one bad record does not hide the rest.
             }
         }
-        entries.sort(Comparator.comparing(LeaderboardEntry::playedAt).reversed());  // sort and return arraylist
+        entries.sort(Comparator.comparingInt(LeaderboardEntry::floorsClimbed).reversed()
+                .thenComparing(LeaderboardEntry::playedAt, Comparator.reverseOrder()));
         return entries;
     }
 
@@ -68,7 +75,7 @@ public final class LeaderboardStore {
         return file;
     }
 
-    private String clean(String text) {   // formatting string  * method is used in this file(private)
+    private String clean(String text) {
         return text.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ');
     }
 }

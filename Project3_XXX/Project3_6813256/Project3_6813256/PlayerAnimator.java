@@ -1,27 +1,41 @@
+/*
+6813256 sornchai soontranon
+6813259 hassadin kheawkhum 
+6813255 Warisa Inthararak 
+6813104 Shayne Chawengchot
+*/
 package Project3_6813256;
 
 import java.awt.image.BufferedImage;
 
-/** Produces small pixel-preserving run and jump poses from the player sprite. */
+/** Produces pixel-preserving run and jump poses from a player sprite. */
 public final class PlayerAnimator {
     private static final int RUN_FRAME_MILLIS = 115;
-    private static final int LEG_START_ROW = 9;
 
     private final BufferedImage standingFrame;
     private final BufferedImage[] runningFrames;
     private final BufferedImage jumpingFrame;
     private final int bottomTransparentRows;
+    private final int legStartRow;
+    private final int legEndRow;
 
     public PlayerAnimator(BufferedImage baseSprite) {
+        this(baseSprite, baseSprite.getHeight() == 16 ? 9 : baseSprite.getHeight() * 3 / 4);
+    }
+
+    public PlayerAnimator(BufferedImage baseSprite, int legStartRow) {
         standingFrame = copy(baseSprite);
         bottomTransparentRows = countBottomTransparentRows(baseSprite);
+        this.legStartRow = Math.max(0, Math.min(legStartRow, baseSprite.getHeight() - 1));
+        legEndRow = Math.max(this.legStartRow,
+                baseSprite.getHeight() - bottomTransparentRows - 1);
         runningFrames = new BufferedImage[] {
             standingFrame,
-            makeRunningPose(baseSprite, -1),
+            makeRunningPose(baseSprite, -1, this.legStartRow, legEndRow),
             standingFrame,
-            makeRunningPose(baseSprite, 1)
+            makeRunningPose(baseSprite, 1, this.legStartRow, legEndRow)
         };
-        jumpingFrame = makeJumpPose(baseSprite);
+        jumpingFrame = makeJumpPose(baseSprite, this.legStartRow, legEndRow);
     }
 
     public BufferedImage frame(boolean airborne, boolean running, long nowNanos) {
@@ -39,10 +53,11 @@ public final class PlayerAnimator {
         return bottomTransparentRows;
     }
 
-    private static BufferedImage makeRunningPose(BufferedImage source, int stride) {
+    private static BufferedImage makeRunningPose(BufferedImage source, int stride,
+            int legStartRow, int legEndRow) {
         BufferedImage pose = copy(source);
-        clearLegArea(pose);
-        for (int y = LEG_START_ROW; y <= 12; y++) {
+        clearLegArea(pose, legStartRow);
+        for (int y = legStartRow; y <= legEndRow; y++) {
             for (int x = 0; x < source.getWidth(); x++) {
                 int color = source.getRGB(x, y);
                 if ((color >>> 24) == 0) {
@@ -57,10 +72,12 @@ public final class PlayerAnimator {
         return pose;
     }
 
-    private static BufferedImage makeJumpPose(BufferedImage source) {
+    private static BufferedImage makeJumpPose(BufferedImage source,
+            int legStartRow, int legEndRow) {
         BufferedImage pose = copy(source);
-        clearLegArea(pose);
-        for (int y = LEG_START_ROW; y <= 10; y++) {
+        clearLegArea(pose, legStartRow);
+        int tuckedStartRow = Math.min(legStartRow + 2, legEndRow + 1);
+        for (int y = legStartRow; y < tuckedStartRow; y++) {
             for (int x = 0; x < source.getWidth(); x++) {
                 int color = source.getRGB(x, y);
                 if ((color >>> 24) != 0) {
@@ -68,21 +85,24 @@ public final class PlayerAnimator {
                 }
             }
         }
-        for (int y = 11; y <= 12; y++) {
+        for (int y = tuckedStartRow; y <= legEndRow; y++) {
             for (int x = 0; x < source.getWidth(); x++) {
                 int color = source.getRGB(x, y);
                 if ((color >>> 24) == 0) {
                     continue;
                 }
                 int tuckedX = x < source.getWidth() / 2 ? x + 1 : x - 1;
-                pose.setRGB(tuckedX, y - 1, color);
+                int tuckedY = y - 1;
+                if (tuckedX >= 0 && tuckedX < pose.getWidth() && tuckedY >= legStartRow) {
+                    pose.setRGB(tuckedX, tuckedY, color);
+                }
             }
         }
         return pose;
     }
 
-    private static void clearLegArea(BufferedImage image) {
-        for (int y = LEG_START_ROW; y < image.getHeight(); y++) {
+    private static void clearLegArea(BufferedImage image, int legStartRow) {
+        for (int y = legStartRow; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 image.setRGB(x, y, 0);
             }

@@ -1,3 +1,9 @@
+/*
+6813256 sornchai soontranon
+6813259 hassadin kheawkhum 
+6813255 Warisa Inthararak 
+6813104 Shayne Chawengchot
+*/
 package Project3_6813256;
 
 import java.time.LocalDateTime;
@@ -97,6 +103,16 @@ public final class GameSession {
         }
         double delta = Math.max(0.0, Math.min(elapsedSeconds, 0.05));
         double simulationDelta = delta * (isTimeSlowed() ? 0.5 : 1.0);
+        int previousCurrentPlatformX = currentPlatform.getX();
+        for (Platform platform : platforms) {
+            if (platform.isMoving()) {
+                platform.update(simulationDelta);
+            }
+        }
+        if (!jumping && !falling) {
+            playerX += currentPlatform.getX() - previousCurrentPlatformX;
+        }
+
         double speed = runSpeedAtFloor(floorsClimbed);
         playerX += (facingLeft ? -1.0 : 1.0) * speed * simulationDelta;
 
@@ -120,11 +136,15 @@ public final class GameSession {
             }
         } else {
             playerWorldY = currentPlatform.getY();
-            if (playerX + PLAYER_WIDTH <= currentPlatform.getX()
-                    || playerX >= currentPlatform.getX() + currentPlatform.getWidth()) {
+            boolean leavingLeftEdge = facingLeft
+                    && playerX <= currentPlatform.getX() + 8.0;
+            boolean leavingRightEdge = !facingLeft
+                    && playerX + PLAYER_WIDTH
+                            >= currentPlatform.getX() + currentPlatform.getWidth() - 8.0;
+            if (leavingLeftEdge || leavingRightEdge) {
                 falling = true;
                 verticalVelocity = 0.0;
-                coyoteUntilMillis = System.currentTimeMillis() + 160L;
+                coyoteUntilMillis = System.currentTimeMillis() + 120L;
             }
         }
 
@@ -344,9 +364,6 @@ public final class GameSession {
         }
     }
 
-    public double getCameraOffset() {
-        return Math.max(0.0, playerWorldY - START_PLATFORM_Y);
-    }
 
     public List<Platform> getPlatforms() {
         return Collections.unmodifiableList(platforms);

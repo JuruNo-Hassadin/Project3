@@ -1,3 +1,9 @@
+/*
+6813256 sornchai soontranon
+6813259 hassadin kheawkhum 
+6813255 Warisa Inthararak 
+6813104 Shayne Chawengchot
+*/
 package Project3_6813256;
 
 import java.awt.BorderLayout;
@@ -19,8 +25,10 @@ public final class GameFrame extends JFrame {
     private static final String MENU_VIEW = "menu";
     private static final String GAME_VIEW = "game";
 
+    private final MenuClickSoundEffect clickSound = new MenuClickSoundEffect();
     private final LeaderboardStore leaderboardStore = new LeaderboardStore();
-    private final GamePanel gamePanel = new GamePanel();
+    private final GamePanel gamePanel = new GamePanel(clickSound,
+            () -> GameFrame.this.settings.isSoundEnabled());
     private final BackgroundMusicPlayer musicPlayer = new BackgroundMusicPlayer();
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel views = new JPanel(cardLayout);
@@ -36,8 +44,9 @@ public final class GameFrame extends JFrame {
             @Override public void onLeaderboard() { openLeaderboard(); }
             @Override public void onSettings() { openSettings(); }
             @Override public void onCredits() { openCredits(); }
-        });
+        }, clickSound, () -> GameFrame.this.settings.isSoundEnabled());
         gamePanel.setOnPauseSettings(this::openSettings);
+        gamePanel.setPlayerSkin(settings.getPlayerSkin());
         gamePanel.setOnQuitToMenu(this::returnToMenu);
         gamePanel.setOnGameOver(this::showGameOver);
         gamePanel.setOnDifficultySelected(difficulty ->
@@ -58,6 +67,7 @@ public final class GameFrame extends JFrame {
                 saveActiveRun();
                 gamePanel.stopRepainting();
                 musicPlayer.close();
+                clickSound.close();
                 dispose();
             }
         });
@@ -72,7 +82,7 @@ public final class GameFrame extends JFrame {
             }
         });
         setLocationRelativeTo(null);
-        musicPlayer.setVolume(settings.getVolume());
+        musicPlayer.setVolume(settings.isMusicMuted() ? 0 : settings.getVolume());
         musicPlayer.startLooping();
     }
 
@@ -155,12 +165,14 @@ public final class GameFrame extends JFrame {
     }
 
     private void openSettings() {
-        SettingsDialog dialog = new SettingsDialog(this, settings);
+        SettingsDialog dialog = new SettingsDialog(this, settings, musicPlayer::setVolume, clickSound);
         dialog.setVisible(true);
         if (dialog.getResult() != null) {
             settings = dialog.getResult();
-            musicPlayer.setVolume(settings.getVolume());
+            menuPanel.setPlayerSkin(settings.getPlayerSkin());
+            gamePanel.setPlayerSkin(settings.getPlayerSkin());
         }
+        musicPlayer.setVolume(settings.isMusicMuted() ? 0 : settings.getVolume());
     }
 
     private void openLeaderboard() {
