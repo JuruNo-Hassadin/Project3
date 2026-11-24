@@ -25,7 +25,7 @@ public final class GameSettings {
                 showStopwatch, reducedShake, volume, false);
     }
 
-    public GameSettings(String playerName, Difficulty difficulty, PlayerSkin playerSkin,
+    public GameSettings(String playerName, Difficulty difficulty, PlayerSkin playerSkin, // player skin
             boolean soundEnabled, boolean landingGuide, boolean showStopwatch,
             boolean reducedShake, int volume) {
         this(playerName, difficulty, playerSkin, soundEnabled, landingGuide,
@@ -34,7 +34,7 @@ public final class GameSettings {
 
     public GameSettings(String playerName, Difficulty difficulty, PlayerSkin playerSkin,
             boolean soundEnabled, boolean landingGuide, boolean showStopwatch,
-            boolean reducedShake, int volume, boolean musicMuted) {
+            boolean reducedShake, int volume, boolean musicMuted) {             // player skin and music mute
         String cleanedName = playerName == null ? "" : playerName.trim();
         this.playerName = cleanedName.isEmpty() ? "Player" : cleanedName;
         this.difficulty = difficulty == null ? Difficulty.NORMAL : difficulty;
