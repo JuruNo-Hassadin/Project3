@@ -18,12 +18,12 @@ public final class LeaderboardDialog extends JDialog {
         super(owner, "Leaderboard", true);     // freeze other frames
         setLayout(new BorderLayout(8, 8));
         String[] columns = {"Played at", "Player", "Difficulty", "Floors", "Seconds"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {      // extends adaptor helper but override so that it's constant table
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         JTable table = new JTable(model);
         table.setRowHeight(24);
-        table.getTableHeader().setReorderingAllowed(false);
+        table.getTableHeader().setReorderingAllowed(false);   // cannot drag Jtable header
         JLabel fileLabel = new JLabel("Saved in: " + store.getFile().normalize());
         try {
             List<LeaderboardEntry> entries = store.loadAll();
