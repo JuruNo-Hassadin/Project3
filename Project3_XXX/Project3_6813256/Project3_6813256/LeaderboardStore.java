@@ -68,7 +68,7 @@ public final class LeaderboardStore {
         return file;
     }
 
-    private String clean(String text) {
+    private String clean(String text) {   // formatting string  * method is used in this file(private)
         return text.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ');
     }
 }
