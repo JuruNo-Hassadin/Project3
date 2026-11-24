@@ -52,11 +52,11 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
                     Clip loadedClip = AudioSystem.getClip();
                     loadedClip.open(decoded);     // user the stream as one-timer for load whole audio into memory (Clip object), use stream because stream's formatting
                     synchronized (this) {      // syncronized for only within same object(this class)
-                        if (closed) {
+                        if (closed) {    // never happend?????????????????????????????????
                             loadedClip.close();
                             return;
                         }
-                        clip = loadedClip;
+                        clip = loadedClip;  // save as member
                         applyVolume();
                         clip.loop(Clip.LOOP_CONTINUOUSLY);
                     }
