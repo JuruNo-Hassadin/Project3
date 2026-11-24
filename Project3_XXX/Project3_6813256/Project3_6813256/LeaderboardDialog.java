@@ -26,16 +26,16 @@ public final class LeaderboardDialog extends JDialog {
         table.getTableHeader().setReorderingAllowed(false);   // cannot drag Jtable header
         JLabel fileLabel = new JLabel("Saved in: " + store.getFile().normalize());
         try {
-            List<LeaderboardEntry> entries = store.loadAll();
+            List<LeaderboardEntry> entries = store.loadAll();   // get data from store object
             for (LeaderboardEntry entry : entries) {
                 model.addRow(new Object[] {entry.playedAt(), entry.playerName(),
-                    entry.difficulty(), entry.floorsClimbed(), entry.durationSeconds()});
+                    entry.difficulty(), entry.floorsClimbed(), entry.durationSeconds()});  // add data back to setuped table
             }
         } catch (IOException exception) {
             fileLabel.setText("Could not load leaderboard: " + exception.getMessage());
         }
         JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(event -> dispose());
+        closeButton.addActionListener(event -> dispose());    // this.dispose()  -->  close jdialog  *when clicked
         add(new JScrollPane(table), BorderLayout.CENTER);
         add(fileLabel, BorderLayout.NORTH);
         add(closeButton, BorderLayout.SOUTH);
