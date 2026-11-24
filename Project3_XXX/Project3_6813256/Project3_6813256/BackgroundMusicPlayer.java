@@ -50,8 +50,8 @@ public final class BackgroundMusicPlayer implements AutoCloseable {
                         sampleRate, 16, channels, channels * 2, sampleRate, false);
                 try (AudioInputStream decoded = AudioSystem.getAudioInputStream(pcmFormat, encoded)) {  // reassign modified value
                     Clip loadedClip = AudioSystem.getClip();
-                    loadedClip.open(decoded);
-                    synchronized (this) {
+                    loadedClip.open(decoded);     // user the stream as one-timer for load whole audio into memory (Clip object), use stream because stream's formatting
+                    synchronized (this) {      // syncronized for only within same object(this class)
                         if (closed) {
                             loadedClip.close();
                             return;
