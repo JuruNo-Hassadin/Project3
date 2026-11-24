@@ -15,12 +15,12 @@ import javax.swing.JTextArea;
 /** Placeholder credits window for team names and asset attributions. */
 public final class CreditsDialog extends JDialog {
     public CreditsDialog(JFrame owner) {
-        super(owner, "Tower Hop - Credits", true);
-        JPanel content = new JPanel(new BorderLayout(0, 14));
+        super(owner, "Tower Hop - Credits", true);       // block input to other objects while dialog is openning
+        JPanel content = new JPanel(new BorderLayout(0, 14)); // object group
         content.setBackground(new Color(29, 45, 62));
         content.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(142, 194, 151), 4),
-                BorderFactory.createEmptyBorder(18, 22, 18, 22)));
+                BorderFactory.createEmptyBorder(18, 22, 18, 22)));     // dialog apperence
 
         JLabel title = new JLabel("CREDITS", JLabel.CENTER);
         title.setFont(new Font(Font.MONOSPACED, Font.BOLD, 24));
@@ -28,7 +28,7 @@ public final class CreditsDialog extends JDialog {
 
         JTextArea text = new JTextArea(
                 "Tower Hop\n\nTeam members: add names and student IDs here.\n"
-                + "Pixel art and audio: add creator/source credits here.");
+                + "Pixel art and audio: add creator/source credits here."); /////////////////////////////////////////////////////////////
         text.setEditable(false);
         text.setFocusable(false);
         text.setOpaque(false);
